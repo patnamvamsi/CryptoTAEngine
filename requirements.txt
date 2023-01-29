@@ -1,0 +1,9 @@
+FastAPI
+uvicorn
+backtrader
+matplotlib==3.2.2
+numpy
+TA-Lib
+backtrader_plotting
+plotly
+python-binance

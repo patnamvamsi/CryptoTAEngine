@@ -94,7 +94,7 @@ def grid_bot():
                 new_buy_price = round(float(order['price']) - (float(order['price']) * GRID_SIZE_PRCNT), 4)
                 print("creating new limit buy order at {}".format(new_buy_price))
                 print(get_binance_positions())
-                new_buy_order = client.order_limit_sell(symbol=SYMBOL, quantity=POSITION_SIZE, price=new_buy_price)
+                new_buy_order = client.order_limit_buy(symbol=SYMBOL, quantity=POSITION_SIZE, price=new_buy_price)
                 buy_orders.append(new_buy_order)
 
             time.sleep(CHECK_ORDERS_FREQUENCY)

@@ -1,0 +1,172 @@
+version: '3.8'
+
+services:
+  # TimescaleDB for all data (both regular tables and time series)
+  # TimescaleDB is PostgreSQL with time-series extensions, so it handles everything
+  timescaledb:
+    image: timescale/timescaledb:latest-pg15
+    container_name: cryptota_timescale
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: trading_engine
+    ports:
+      - "5432:5432"
+    volumes:
+      - timescale_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Redis for caching and Celery broker
+  redis:
+    image: redis:7-alpine
+    container_name: cryptota_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # FastAPI application
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cryptota_api
+    ports:
+      - "8001:8001"
+    environment:
+      # TimescaleDB (single database for everything)
+      TIMESCALE_HOST: timescaledb
+      TIMESCALE_PORT: 5432
+      TIMESCALE_USER: postgres
+      TIMESCALE_PASSWORD: postgres
+      TIMESCALE_DB: trading_engine
+
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+
+      # Binance API (set your keys here or use .env file)
+      BINANCE_API_KEY: ${BINANCE_API_KEY:-}
+      BINANCE_API_SECRET: ${BINANCE_API_SECRET:-}
+      BINANCE_TESTNET: "true"
+
+      # Application
+      DEBUG: "false"
+      LOG_LEVEL: INFO
+      LOG_FORMAT: json
+    volumes:
+      - ./app:/CryptoTAEngine/app
+      - ./data:/data
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    command: >
+      sh -c "uvicorn main_new:app --host 0.0.0.0 --port 8001 --reload"
+
+  # Celery worker for distributed backtesting
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cryptota_celery_worker
+    environment:
+      # TimescaleDB
+      TIMESCALE_HOST: timescaledb
+      TIMESCALE_PORT: 5432
+      TIMESCALE_USER: postgres
+      TIMESCALE_PASSWORD: postgres
+      TIMESCALE_DB: trading_engine
+
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+
+      # Binance API
+      BINANCE_API_KEY: ${BINANCE_API_KEY:-}
+      BINANCE_API_SECRET: ${BINANCE_API_SECRET:-}
+      BINANCE_TESTNET: "true"
+
+      # Logging
+      LOG_LEVEL: INFO
+      LOG_FORMAT: json
+    volumes:
+      - ./app:/CryptoTAEngine/app
+      - ./data:/data
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    command: >
+      sh -c "celery -A celery_app worker --loglevel=info --concurrency=4"
+
+  # Celery beat for scheduled tasks (optional)
+  celery_beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cryptota_celery_beat
+    environment:
+      # TimescaleDB
+      TIMESCALE_HOST: timescaledb
+      TIMESCALE_PORT: 5432
+      TIMESCALE_USER: postgres
+      TIMESCALE_PASSWORD: postgres
+      TIMESCALE_DB: trading_engine
+
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+
+      # Logging
+      LOG_LEVEL: INFO
+    volumes:
+      - ./app:/CryptoTAEngine/app
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    command: >
+      sh -c "celery -A celery_app beat --loglevel=info"
+
+  # Flower for Celery monitoring (optional)
+  flower:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cryptota_flower
+    ports:
+      - "5555:5555"
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/0
+    depends_on:
+      - redis
+      - celery_worker
+    restart: unless-stopped
+    command: >
+      sh -c "celery -A celery_app flower --port=5555"
+
+volumes:
+  timescale_data:
+  redis_data:
+
+networks:
+  default:
+    name: cryptota_network

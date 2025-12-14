@@ -44,12 +44,15 @@ class RSIStrategy(bt.Strategy):
             self.close()
 
 
-def get_backtest_results():
-    cerebro = bt.Cerebro()
+def get_backtest_results(data_path=None, start_date='2020-07-01', end_date='2020-07-12'):
+    import os
+    if data_path is None:
+        data_path = os.getenv('BACKTEST_DATA_PATH', '/data/2020_15minutes.csv')
+
     cerebro = cryptoCerbro()
-    fromdate = datetime.datetime.strptime('2020-07-01', '%Y-%m-%d')
-    todate = datetime.datetime.strptime('2020-07-12', '%Y-%m-%d')
-    data = bt.feeds.GenericCSVData(dataname='/home/vamsi/Dev/Projects/CryptoTrading/data/2020_15minutes.csv', dtformat=2, compression=15,
+    fromdate = datetime.datetime.strptime(start_date, '%Y-%m-%d')
+    todate = datetime.datetime.strptime(end_date, '%Y-%m-%d')
+    data = bt.feeds.GenericCSVData(dataname=data_path, dtformat=2, compression=15,
                                    timeframe=bt.TimeFrame.Minutes, fromdate=fromdate, todate=todate)
 
     cerebro.adddata(data)

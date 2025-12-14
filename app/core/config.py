@@ -28,12 +28,12 @@ class Settings(BaseSettings):
     CACHE_DIR: str = "/cache"
     BACKTEST_DATA_PATH: str = "/data/2020_15minutes.csv"
 
-    # TimescaleDB Configuration (single database for everything)
+    # TimescaleDB Configuration (shared with CryptoMarketData microservice)
     TIMESCALE_USER: str = "postgres"
     TIMESCALE_PASSWORD: str = "postgres"
     TIMESCALE_HOST: str = "localhost"
     TIMESCALE_PORT: int = 5432
-    TIMESCALE_DB: str = "trading_engine"
+    TIMESCALE_DB: str = "market_data"  # Shared database with CryptoMarketData
 
     @property
     def DATABASE_URL(self) -> str:

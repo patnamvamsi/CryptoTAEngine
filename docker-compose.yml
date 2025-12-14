@@ -1,25 +1,9 @@
 version: '3.8'
 
 services:
-  # TimescaleDB for all data (both regular tables and time series)
-  # TimescaleDB is PostgreSQL with time-series extensions, so it handles everything
-  timescaledb:
-    image: timescale/timescaledb:latest-pg15
-    container_name: cryptota_timescale
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: trading_engine
-    ports:
-      - "5432:5432"
-    volumes:
-      - timescale_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
+  # NOTE: TimescaleDB is managed by CryptoMarketData microservice
+  # This compose file connects to the existing instance
+  # Make sure CryptoMarketData's TimescaleDB is running before starting these services
 
   # Redis for caching and Celery broker
   redis:
@@ -45,12 +29,12 @@ services:
     ports:
       - "8001:8001"
     environment:
-      # TimescaleDB (single database for everything)
-      TIMESCALE_HOST: timescaledb
+      # TimescaleDB (shared with CryptoMarketData - external instance)
+      TIMESCALE_HOST: host.docker.internal  # Access host machine's TimescaleDB
       TIMESCALE_PORT: 5432
       TIMESCALE_USER: postgres
-      TIMESCALE_PASSWORD: postgres
-      TIMESCALE_DB: trading_engine
+      TIMESCALE_PASSWORD: ${TIMESCALE_PASSWORD:-postgres}
+      TIMESCALE_DB: market_data  # Shared database with CryptoMarketData
 
       # Redis
       REDIS_HOST: redis
@@ -69,11 +53,11 @@ services:
       - ./app:/CryptoTAEngine/app
       - ./data:/data
     depends_on:
-      timescaledb:
-        condition: service_healthy
       redis:
         condition: service_healthy
     restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # Allow access to host's TimescaleDB
     command: >
       sh -c "uvicorn main_new:app --host 0.0.0.0 --port 8001 --reload"
 
@@ -85,11 +69,11 @@ services:
     container_name: cryptota_celery_worker
     environment:
       # TimescaleDB
-      TIMESCALE_HOST: timescaledb
+      TIMESCALE_HOST: host.docker.internal
       TIMESCALE_PORT: 5432
       TIMESCALE_USER: postgres
-      TIMESCALE_PASSWORD: postgres
-      TIMESCALE_DB: trading_engine
+      TIMESCALE_PASSWORD: ${TIMESCALE_PASSWORD:-postgres}
+      TIMESCALE_DB: market_data
 
       # Redis
       REDIS_HOST: redis
@@ -107,11 +91,11 @@ services:
       - ./app:/CryptoTAEngine/app
       - ./data:/data
     depends_on:
-      timescaledb:
-        condition: service_healthy
       redis:
         condition: service_healthy
     restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     command: >
       sh -c "celery -A celery_app worker --loglevel=info --concurrency=4"
 
@@ -123,11 +107,11 @@ services:
     container_name: cryptota_celery_beat
     environment:
       # TimescaleDB
-      TIMESCALE_HOST: timescaledb
+      TIMESCALE_HOST: host.docker.internal
       TIMESCALE_PORT: 5432
       TIMESCALE_USER: postgres
-      TIMESCALE_PASSWORD: postgres
-      TIMESCALE_DB: trading_engine
+      TIMESCALE_PASSWORD: ${TIMESCALE_PASSWORD:-postgres}
+      TIMESCALE_DB: market_data
 
       # Redis
       REDIS_HOST: redis
@@ -138,11 +122,11 @@ services:
     volumes:
       - ./app:/CryptoTAEngine/app
     depends_on:
-      timescaledb:
-        condition: service_healthy
       redis:
         condition: service_healthy
     restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     command: >
       sh -c "celery -A celery_app beat --loglevel=info"
 
@@ -164,9 +148,15 @@ services:
       sh -c "celery -A celery_app flower --port=5555"
 
 volumes:
-  timescale_data:
   redis_data:
 
 networks:
   default:
     name: cryptota_network
+
+# IMPORTANT NOTES:
+# 1. TimescaleDB is NOT included in this compose file
+# 2. CryptoMarketData microservice manages the TimescaleDB instance
+# 3. Make sure TimescaleDB (market_data database) is running before starting these services
+# 4. Services connect to host's TimescaleDB using host.docker.internal
+# 5. If TimescaleDB is on a different machine, update TIMESCALE_HOST in environment

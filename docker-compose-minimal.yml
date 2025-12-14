@@ -1,0 +1,67 @@
+version: '3.8'
+
+# MINIMAL SETUP - No Celery workers, just API + Redis for basic caching
+# Use this if you don't need distributed backtesting
+
+services:
+  # Redis for basic caching only (no Celery)
+  redis:
+    image: redis:7-alpine
+    container_name: cryptota_redis_minimal
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+
+  # FastAPI application (synchronous backtesting)
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cryptota_api_minimal
+    ports:
+      - "8001:8001"
+    environment:
+      # TimescaleDB (shared with CryptoMarketData)
+      TIMESCALE_HOST: host.docker.internal
+      TIMESCALE_PORT: 5432
+      TIMESCALE_USER: postgres
+      TIMESCALE_PASSWORD: ${TIMESCALE_PASSWORD:-postgres}
+      TIMESCALE_DB: market_data
+
+      # Redis (basic caching only)
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+
+      # Binance API
+      BINANCE_API_KEY: ${BINANCE_API_KEY:-}
+      BINANCE_API_SECRET: ${BINANCE_API_SECRET:-}
+      BINANCE_TESTNET: "true"
+
+      # Application
+      DEBUG: "false"
+      LOG_LEVEL: INFO
+      LOG_FORMAT: json
+    volumes:
+      - ./app:/CryptoTAEngine/app
+      - ./data:/data
+    depends_on:
+      - redis
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: >
+      sh -c "uvicorn main_new:app --host 0.0.0.0 --port 8001 --reload"
+
+volumes:
+  redis_data:
+
+networks:
+  default:
+    name: cryptota_network_minimal
+
+# NOTE: No Celery workers in this setup
+# Backtests run synchronously (blocking)
+# Use full docker-compose.yml for distributed processing

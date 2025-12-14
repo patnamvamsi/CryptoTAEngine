@@ -1,0 +1,55 @@
+version: '3.8'
+
+# NO REDIS SETUP - Absolute minimal configuration
+# WARNING: No caching, no distributed processing, no async jobs
+# Only use for development/testing on single machine
+
+services:
+  # FastAPI application only (no Redis, no Celery)
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cryptota_api_standalone
+    ports:
+      - "8001:8001"
+    environment:
+      # TimescaleDB (shared with CryptoMarketData)
+      TIMESCALE_HOST: host.docker.internal
+      TIMESCALE_PORT: 5432
+      TIMESCALE_USER: postgres
+      TIMESCALE_PASSWORD: ${TIMESCALE_PASSWORD:-postgres}
+      TIMESCALE_DB: market_data
+
+      # No Redis
+      REDIS_HOST: ""
+      REDIS_PORT: ""
+
+      # Binance API
+      BINANCE_API_KEY: ${BINANCE_API_KEY:-}
+      BINANCE_API_SECRET: ${BINANCE_API_SECRET:-}
+      BINANCE_TESTNET: "true"
+
+      # Application
+      DEBUG: "false"
+      LOG_LEVEL: INFO
+      LOG_FORMAT: json
+    volumes:
+      - ./app:/CryptoTAEngine/app
+      - ./data:/data
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: >
+      sh -c "uvicorn main_new:app --host 0.0.0.0 --port 8001 --reload"
+
+networks:
+  default:
+    name: cryptota_network_standalone
+
+# LIMITATIONS:
+# - No caching (all backtests run from scratch)
+# - No distributed processing (single-threaded)
+# - No async job queue (API blocks during backtest)
+# - No rate limiting
+# - Not recommended for production

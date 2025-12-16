@@ -31,9 +31,9 @@ class Settings(BaseSettings):
     # TimescaleDB Configuration (shared with CryptoMarketData microservice)
     TIMESCALE_USER: str = "postgres"
     TIMESCALE_PASSWORD: str = "postgres"
-    TIMESCALE_HOST: str = "localhost"
+    TIMESCALE_HOST: str = "192.168.0.89"
     TIMESCALE_PORT: int = 5432
-    TIMESCALE_DB: str = "market_data"  # Shared database with CryptoMarketData
+    TIMESCALE_DB: str = "market_data_dev1"  # Shared database with CryptoMarketData
 
     @property
     def DATABASE_URL(self) -> str:

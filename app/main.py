@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-import RSI_strategy
+from app import RSI_strategy
 
 app = FastAPI()
 

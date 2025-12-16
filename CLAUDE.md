@@ -26,7 +26,7 @@ pip install -r requirements.txt
 docker-compose up -d
 
 # Start API only (local development)
-uvicorn app.main_new:app --reload --port 8001
+uvicorn app.main:app --reload --port 8001
 
 # Start Celery worker (separate terminal, from app/ directory)
 cd app
@@ -84,7 +84,7 @@ python -c "from data.storage.database import db_manager; db_manager.initialize()
 
 ### Core Components
 
-**FastAPI Application** (`app/main_new.py`)
+**FastAPI Application** (`app/main.py`)
 - Main entry point with lifespan management
 - Initializes database, TimescaleDB, and Redis on startup
 - Includes routers for backtest, health, and data endpoints
@@ -222,7 +222,7 @@ app/
 ├── utils/
 │   ├── cache.py         # Redis caching utilities
 │   └── logging_config.py # Structured logging setup
-├── main_new.py          # FastAPI application entry point
+├── main.py              # FastAPI application entry point
 └── celery_app.py        # Celery configuration
 ```
 

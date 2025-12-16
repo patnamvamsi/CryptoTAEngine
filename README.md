@@ -93,11 +93,9 @@ CryptoTAEngine/
 │   ├── utils/
 │   │   ├── cache.py             # Redis caching
 │   │   └── logging_config.py    # Logging setup
-│   ├── main_new.py              # New FastAPI app
+│   ├── main.py                  # FastAPI app
 │   ├── celery_app.py            # Celery configuration
-│   ├── grid_bot.py              # Grid trading bot (fixed)
-│   ├── RSI_strategy.py          # Legacy RSI (kept for reference)
-│   └── Calculations.py          # Financial calculations
+│   └── grid_bot.py              # Grid trading bot
 ├── docker-compose.yml           # Multi-service setup
 ├── Dockerfile                   # Container definition
 ├── requirements.txt             # Python dependencies
@@ -168,7 +166,7 @@ python -c "from data.storage.database import db_manager; db_manager.initialize()
 
 5. **Start the API**
 ```bash
-uvicorn main_new:app --reload --port 8001
+uvicorn main:app --reload --port 8001
 ```
 
 6. **Start Celery worker** (in separate terminal)

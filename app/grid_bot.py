@@ -1,5 +1,5 @@
 from binance.client import Client
-from config import config
+from core.config import settings
 from binance import ThreadedWebsocketManager
 from binance.enums import *
 import time, sys
@@ -16,7 +16,7 @@ CHECK_ORDERS_FREQUENCY = 10
 ALIVE_ORDER_STATUS = ['NEW','PARTIALLY_FILLED']
 FILLED_ORDER_STATUS = 'FILLED'
 
-client = Client(config.API_KEY, config.API_SECRET)
+client = Client(settings.BINANCE_API_KEY, settings.BINANCE_API_SECRET)
 
 def grid_bot():
 

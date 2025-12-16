@@ -1,7 +1,7 @@
 """
 Abstract base class for all trading strategies.
 """
-from abc import ABC, abstractmethod
+from abc import ABCMeta, abstractmethod
 import backtrader as bt
 from typing import Dict, Any, List
 from datetime import datetime
@@ -10,7 +10,12 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class BaseStrategy(bt.Strategy, ABC):
+class StrategyMeta(type(bt.Strategy), ABCMeta):
+    """Metaclass that resolves the conflict between bt.Strategy and ABC."""
+    pass
+
+
+class BaseStrategy(bt.Strategy, metaclass=StrategyMeta):
     """
     Abstract base class for trading strategies.
 
@@ -198,7 +203,7 @@ class BaseStrategy(bt.Strategy, ABC):
         return self.dates
 
 
-class LongOnlyStrategy(BaseStrategy, ABC):
+class LongOnlyStrategy(BaseStrategy):
     """
     Base class for long-only strategies (no short selling).
     """
@@ -209,7 +214,7 @@ class LongOnlyStrategy(BaseStrategy, ABC):
             super().execute_sell()
 
 
-class LongShortStrategy(BaseStrategy, ABC):
+class LongShortStrategy(BaseStrategy):
     """
     Base class for long/short strategies.
     """

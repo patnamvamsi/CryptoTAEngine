@@ -5,7 +5,7 @@ from binance.client import Client
 from binance import AsyncClient
 import pandas as pd
 from datetime import datetime, timedelta
-from typing import Optional, List
+from typing import Optional, List, Dict
 import asyncio
 import logging
 
